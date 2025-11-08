@@ -398,7 +398,7 @@ buildPointCloudLaplacianBatched(
 #if USE_OPENMP
 #pragma omp parallel for
 #endif
-  for (size_t i = 0; i < vMat.size(); i++) {
+  for (int64_t i = 0; i < vMat.size(); i++) {
     std::tie(Ls[i], Ms[i]) = buildPointCloudLaplacian(vMat[i], mollifyFactor, nNeigh);
   }
   // Merge into a larger laplacian.

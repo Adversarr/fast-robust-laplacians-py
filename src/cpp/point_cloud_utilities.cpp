@@ -18,7 +18,7 @@ std::vector<std::vector<size_t>> generate_knn(const std::vector<Vector3>& points
 #ifdef USE_OPENMP
 #pragma omp parallel for schedule(static)
 #endif
-  for (size_t i = 0; i < points.size(); i++) {
+  for (int64_t i = 0; i < points.size(); i++) {
     result[i] = finder.kNearestNeighbors(i, k);
   }
 
@@ -33,7 +33,7 @@ std::vector<Vector3> generate_normals(const std::vector<Vector3>& points, const 
 #ifdef USE_OPENMP
 #pragma omp parallel for schedule(static)
 #endif
-  for (size_t iPt = 0; iPt < points.size(); iPt++) {
+  for (int64_t iPt = 0; iPt < points.size(); iPt++) {
     size_t nNeigh = neigh[iPt].size();
 
     // Compute centroid
@@ -73,7 +73,7 @@ std::vector<std::vector<Vector2>> generate_coords_projection(const std::vector<V
 #ifdef USE_OPENMP
 #pragma omp parallel for schedule(static)
 #endif
-  for (size_t iPt = 0; iPt < points.size(); iPt++) {
+  for (int64_t iPt = 0; iPt < points.size(); iPt++) {
     size_t nNeigh = neigh[iPt].size();
     coords[iPt].resize(nNeigh);
     Vector3 center = points[iPt];
@@ -131,7 +131,7 @@ LocalTriangulationResult build_delaunay_triangulations(const std::vector<std::ve
 #ifdef USE_OPENMP
 #pragma omp parallel for schedule(static)
 #endif
-  for (size_t iPt = 0; iPt < nPts; iPt++) {
+  for (int64_t iPt = 0; iPt < nPts; iPt++) {
     size_t nNeigh = neigh[iPt].size();
     double lenScale = norm(coords[iPt].back());
 
