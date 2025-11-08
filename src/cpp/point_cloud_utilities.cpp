@@ -13,8 +13,13 @@ std::vector<std::vector<size_t>> generate_knn(const std::vector<Vector3>& points
   geometrycentral::NearestNeighborFinder finder(points);
 
   std::vector<std::vector<size_t>> result;
+  result.resize(points.size());
+
+#ifdef USE_OPENMP
+#pragma omp parallel for schedule(static)
+#endif
   for (size_t i = 0; i < points.size(); i++) {
-    result.emplace_back(finder.kNearestNeighbors(i, k));
+    result[i] = finder.kNearestNeighbors(i, k);
   }
 
   return result;
@@ -25,6 +30,9 @@ std::vector<Vector3> generate_normals(const std::vector<Vector3>& points, const 
 
   std::vector<Vector3> normals(points.size());
 
+#ifdef USE_OPENMP
+#pragma omp parallel for schedule(static)
+#endif
   for (size_t iPt = 0; iPt < points.size(); iPt++) {
     size_t nNeigh = neigh[iPt].size();
 
@@ -58,10 +66,13 @@ std::vector<Vector3> generate_normals(const std::vector<Vector3>& points, const 
 
 
 std::vector<std::vector<Vector2>> generate_coords_projection(const std::vector<Vector3>& points,
-                                                             const std::vector<Vector3> normals,
+                                                             const std::vector<Vector3>& normals,
                                                              const Neighbors_t& neigh) {
   std::vector<std::vector<Vector2>> coords(points.size());
 
+#ifdef USE_OPENMP
+#pragma omp parallel for schedule(static)
+#endif
   for (size_t iPt = 0; iPt < points.size(); iPt++) {
     size_t nNeigh = neigh[iPt].size();
     coords[iPt].resize(nNeigh);
@@ -117,6 +128,9 @@ LocalTriangulationResult build_delaunay_triangulations(const std::vector<std::ve
   LocalTriangulationResult result;
   result.pointTriangles.resize(nPts);
 
+#ifdef USE_OPENMP
+#pragma omp parallel for schedule(static)
+#endif
   for (size_t iPt = 0; iPt < nPts; iPt++) {
     size_t nNeigh = neigh[iPt].size();
     double lenScale = norm(coords[iPt].back());
@@ -219,6 +233,7 @@ LocalTriangulationResult build_delaunay_triangulations(const std::vector<std::ve
 
     size_t edgeStartInd = 0;
     std::vector<std::array<size_t, 3>>& thisPointTriangles = result.pointTriangles[iPt]; // accumulate result
+    thisPointTriangles.reserve(nNeigh);
 
     // end point should wrap around the check the first point only if there is no boundary
     size_t searchEnd = nNeigh + (hasBoundary ? 0 : 1);

@@ -203,6 +203,12 @@ std::tuple<SparseMatrix<double>, SparseMatrix<double>> buildPointCloudLaplacian(
   }
 
   // Take the union of all triangles in all the neighborhoods
+  // Precompute total triangle count to reserve capacity and avoid reallocations
+  size_t totalTriangles = 0;
+  for (size_t iPt = 0; iPt < cloudMesh.vertexCoordinates.size(); iPt++) {
+    totalTriangles += localTri.pointTriangles[iPt].size();
+  }
+  cloudMesh.polygons.reserve(cloudMesh.polygons.size() + totalTriangles);
   std::chrono::steady_clock::time_point t_union_start;
   bool union_started = false;
   for (size_t iPt = 0; iPt < cloudMesh.vertexCoordinates.size(); iPt++) {
@@ -255,8 +261,9 @@ std::tuple<SparseMatrix<double>, SparseMatrix<double>> buildPointCloudLaplacian(
     std::cout << "[PointCloud] tufted laplacian total: " << dt.count() << " ms" << std::endl;
   }
 
-  L = L / 3.;
-  M = M / 3.;
+  // In-place scaling to avoid allocating new sparse matrices
+  L *= (1.0 / 3.0);
+  M *= (1.0 / 3.0);
   if (g_printTiming) {
     std::cout << "[PointCloud] scale matrices by 1/3" << std::endl;
   }
