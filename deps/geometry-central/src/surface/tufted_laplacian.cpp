@@ -116,13 +116,15 @@ void buildIntrinsicTuftedCover(SurfaceMesh& mesh, EdgeData<double>& edgeLengths,
 
     // Gather the original faces incident on the edge (represented by the halfedge along the edge)
     std::vector<Halfedge> edgeFaces;
+    edgeFaces.reserve(4); // small reserve to avoid frequent reallocations
     for (Halfedge he : e.adjacentHalfedges()) {
       if (isFront[he.face()]) edgeFaces.push_back(he);
     }
+    if (edgeFaces.empty()) continue; // guard against unexpected boundary/degenerate cases
 
     // If we have normals, use them for an angular sort.
     // Otherwise, just use the "natural" (arbitrary) ordering
-    if (posGeom) {
+    if (posGeom && edgeFaces.size() > 2) {
 
       Vector3 pTail = posGeom->vertexPositions[e.halfedge().tailVertex()];
       Vector3 pTip = posGeom->vertexPositions[e.halfedge().tipVertex()];
@@ -131,7 +133,8 @@ void buildIntrinsicTuftedCover(SurfaceMesh& mesh, EdgeData<double>& edgeLengths,
 
       auto edgeAngle = [&](const Halfedge& he) {
         Vector3 oppVert = posGeom->vertexPositions[he.next().tipVertex()];
-        Vector3 outVec = unit(oppVert - pTail);
+        Vector3 outVec = oppVert - pTail; // normalization is unnecessary for atan2(angle)
+        // TODO: if oppVert == pTail, outVec is zero; angle undefined. Previous code also ill-defined.
         return ::std::atan2(dot(std::get<1>(eBasis), outVec), dot(std::get<0>(eBasis), outVec));
       };
       auto sortFunc = [&](const Halfedge& heA, const Halfedge& heB) -> bool { return edgeAngle(heA) > edgeAngle(heB); };

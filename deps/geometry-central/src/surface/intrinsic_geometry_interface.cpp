@@ -425,6 +425,7 @@ void IntrinsicGeometryInterface::computeCotanLaplacian() {
 
   cotanLaplacian = Eigen::SparseMatrix<double>(mesh.nVertices(), mesh.nVertices());
   std::vector<Eigen::Triplet<double>> tripletList;
+  tripletList.reserve(mesh.nEdges() * 4); // each edge contributes 4 triplets
 
   for (Edge e : mesh.edges()) {
     Halfedge he = e.halfedge();
@@ -436,10 +437,10 @@ void IntrinsicGeometryInterface::computeCotanLaplacian() {
 
     double weight = edgeCotanWeights[e];
 
-    tripletList.emplace_back(iVTail, iVTail, weight);
-    tripletList.emplace_back(iVHead, iVHead, weight);
-    tripletList.emplace_back(iVTail, iVHead, -weight);
-    tripletList.emplace_back(iVHead, iVTail, -weight);
+    tripletList.emplace_back(static_cast<int>(iVTail), static_cast<int>(iVTail), weight);
+    tripletList.emplace_back(static_cast<int>(iVHead), static_cast<int>(iVHead), weight);
+    tripletList.emplace_back(static_cast<int>(iVTail), static_cast<int>(iVHead), -weight);
+    tripletList.emplace_back(static_cast<int>(iVHead), static_cast<int>(iVTail), -weight);
   }
 
   cotanLaplacian.setFromTriplets(tripletList.begin(), tripletList.end());
