@@ -19,12 +19,21 @@
 #include <chrono>
 #include <iostream>
 
+#ifdef USE_OPENMP
+#include <omp.h>
+#endif
+
 namespace py = pybind11;
 
 using namespace geometrycentral;
 using namespace geometrycentral::surface;
 
 bool g_printTiming = false;
+
+void setParallism(int count) {
+  Eigen::setNbThreads(count);
+  omp_set_num_threads(count);
+}
 
 void setPrintTiming(bool enable) {
   g_printTiming = enable;
