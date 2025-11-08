@@ -46,3 +46,34 @@ def point_cloud_laplacian(points, mollify_factor=1e-5, n_neighbors=30):
 
     ## Return the result
     return L, M
+
+def point_cloud_laplacian_batched(list_of_points, mollify_factor=1e-5, n_neighbors=30):
+    """
+    Compute Laplacians for multiple point clouds and return a single block-diagonal system.
+
+    Parameters:
+    - list_of_points: list of numpy arrays, each shaped `(V_i, 3)`
+    - mollify_factor: float, regularization strength
+    - n_neighbors: int, neighborhood size used to build local triangulations
+
+    Returns:
+    - (L, M): tuple of scipy.sparse matrices, block-diagonal concatenation across inputs
+    """
+    ## Validate input
+    if type(list_of_points) is not list:
+        raise ValueError("`list_of_points` should be a list of numpy arrays")
+    if len(list_of_points) == 0:
+        raise ValueError("`list_of_points` cannot be empty")
+    for i, pts in enumerate(list_of_points):
+        if type(pts) is not np.ndarray:
+            raise ValueError(f"`list_of_points[{i}]` should be a numpy array")
+        if (len(pts.shape) != 2) or (pts.shape[1] != 3):
+            raise ValueError(f"`list_of_points[{i}]` should have shape (V,3), shape is {pts.shape}")
+
+    ## Call the batched algorithm from the bindings
+    # NOTE: pybind11 should convert list[np.ndarray] -> std::vector<Eigen::MatrixXd>
+    # If bindings fail to cast, consider converting to a Python list of contiguous arrays.
+    L, M = rlb.buildPointCloudLaplacianBatched(list_of_points, mollify_factor, n_neighbors)
+
+    ## Return the result
+    return L, M

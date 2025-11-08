@@ -14,6 +14,7 @@
 #include <pybind11/eigen.h>
 #include <pybind11/numpy.h>
 #include <pybind11/pybind11.h>
+#include <pybind11/stl.h>
 
 #include "Eigen/Dense"
 #include <chrono>
@@ -353,11 +354,59 @@ std::tuple<SparseMatrix<double>, SparseMatrix<double>> buildPointCloudLaplacian(
     std::chrono::duration<double, std::milli> dt = t_all_end - t_func_start;
     std::cout << "[PointCloud] total function time: " << dt.count() << " ms" << std::endl;
   }
+  L.makeCompressed();
+  M.makeCompressed();
   return std::make_tuple(L, M);
 }
 
-// Actual binding code
-// clang-format off
+SparseMatrix<double> merge_matrices(const std::vector<SparseMatrix<double>>& mats) {
+  int n = 0;
+  int nnz = 0;
+  for (const auto& mat : mats) {
+    n += mat.rows();
+    nnz += mat.nonZeros();
+  }
+  // Build block-diagonal sparse matrix from input matrices
+  SparseMatrix<double> merged(n, n);
+  std::vector<Eigen::Triplet<double>> triplets;
+  triplets.reserve(nnz);
+
+  int offset = 0;
+  for (const auto& mat : mats) {
+    // Copy entries with row/col offset
+    for (int k = 0; k < mat.outerSize(); ++k) {
+      for (typename SparseMatrix<double>::InnerIterator it(mat, k); it; ++it) {
+        triplets.emplace_back(offset + it.row(), offset + it.col(), it.value());
+      }
+    }
+    offset += mat.rows();
+  }
+
+  merged.setFromTriplets(triplets.begin(), triplets.end());
+  merged.makeCompressed();
+  return merged;
+}
+
+std::tuple<SparseMatrix<double>, SparseMatrix<double>>
+buildPointCloudLaplacianBatched(
+  const std::vector<DenseMatrix<double>>& vMat, double mollifyFactor, size_t nNeigh) {
+  std::vector<SparseMatrix<double>> Ls(vMat.size());
+  std::vector<SparseMatrix<double>> Ms(vMat.size());
+#if USE_OPENMP
+#pragma omp parallel for
+#endif
+  for (size_t i = 0; i < vMat.size(); i++) {
+    std::tie(Ls[i], Ms[i]) = buildPointCloudLaplacian(vMat[i], mollifyFactor, nNeigh);
+  }
+  // Merge into a larger laplacian.
+  SparseMatrix<double> L = merge_matrices(Ls);
+  SparseMatrix<double> M = merge_matrices(Ms);
+  return std::make_tuple(L, M);
+}
+
+
+  // Actual binding code
+  // clang-format off
 PYBIND11_MODULE(fast_robust_laplacian_bindings, m) {
   m.doc() = "Robust laplacian low-level bindings";
   m.def("setPrintTiming", &setPrintTiming, "set whether to print timing information", py::arg("enable"));
@@ -367,6 +416,12 @@ PYBIND11_MODULE(fast_robust_laplacian_bindings, m) {
   
   m.def("buildPointCloudLaplacian", &buildPointCloudLaplacian, "build the point cloud Laplacian", 
       py::arg("vMat"), py::arg("mollifyFactor"), py::arg("nNeigh"));
+
+  // TODO: Verify pybind11 automatically converts list of numpy arrays to std::vector<DenseMatrix<double>>.
+  // Reason: pybind11/eigen supports Eigen::Matrix, but vector-of-matrix conversions depend on caster chaining.
+  m.def("buildPointCloudLaplacianBatched", &buildPointCloudLaplacianBatched,
+        "build batched point cloud Laplacians and merge block-diagonally",
+        py::arg("vMats"), py::arg("mollifyFactor"), py::arg("nNeigh"));
 }
 
-// clang-format on
+  // clang-format on
