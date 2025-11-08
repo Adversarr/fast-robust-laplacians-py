@@ -1,6 +1,6 @@
 import numpy as np
 
-import robust_laplacian_bindings as rlb
+import fast_robust_laplacian_bindings as rlb
 
 def mesh_laplacian(verts, faces, mollify_factor=1e-5):
 

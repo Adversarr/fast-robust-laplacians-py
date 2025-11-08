@@ -3,7 +3,7 @@
 [![actions status windows](https://github.com/nmwsharp/robust-laplacians-py/workflows/Test%20Windows/badge.svg)](https://github.com/nmwsharp/robust-laplacians-py/actions)
 [![PyPI](https://img.shields.io/pypi/v/robust-laplacian?style=plastic)](https://pypi.org/project/robust-laplacian/)
 
-A Python package for high-quality Laplace matrices on meshes and point clouds. `pip install robust_laplacian`
+A Python package for high-quality Laplace matrices on meshes and point clouds. `pip install fast_robust_laplacian`
 
 The Laplacian is at the heart of many algorithms across geometry processing, simulation, and machine learning. This library builds a high-quality, robust Laplace matrix which often improves the performance of these algorithms, and wraps it all up in a simple, single-function API! 
 
@@ -23,11 +23,11 @@ This library implements the algorithm described in [A Laplacian for Nonmanifold 
 Build a point cloud Laplacian, compute its first 10 eigenvectors, and visualize with [Polyscope](https://polyscope.run/py/)
 
 ```shell
-pip install numpy scipy plyfile polyscope robust_laplacian
+pip install numpy scipy plyfile polyscope fast_robust_laplacian
 ```
 
 ```py
-import robust_laplacian
+import fast_robust_laplacian
 from plyfile import PlyData
 import numpy as np
 import polyscope as ps
@@ -42,10 +42,10 @@ points = np.vstack((
 )).T
 
 # Build point cloud Laplacian
-L, M = robust_laplacian.point_cloud_laplacian(points)
+L, M = fast_robust_laplacian.point_cloud_laplacian(points)
 
 # (or for a mesh)
-# L, M = robust_laplacian.mesh_laplacian(verts, faces)
+# L, M = fast_robust_laplacian.mesh_laplacian(verts, faces)
 
 # Compute some eigenvectors
 n_eig = 10
@@ -81,7 +81,7 @@ This package exposes just two functions:
 The package is availabe via `pip`
 
 ```
-pip install robust_laplacian
+pip install fast_robust_laplacian
 ```
 
 The underlying algorithm is implemented in C++; the pypi entry includes precompiled binaries for many platforms.

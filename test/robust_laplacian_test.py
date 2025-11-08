@@ -16,7 +16,7 @@ else:
     sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "build")))
 
 
-import robust_laplacian as rl
+import fast_robust_laplacian as rl
 
 
 def generate_verts(n_pts=999):

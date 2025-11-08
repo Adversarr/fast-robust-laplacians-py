@@ -1,5 +1,5 @@
 [project]
-name = "robust_laplacian"
+name = "fast_robust_laplacian"
 version = "1.0.0"
 description = "Robust Laplace matrices for meshes and point clouds"
 readme = "README.md"

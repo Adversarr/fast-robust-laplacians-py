@@ -342,7 +342,7 @@ std::tuple<SparseMatrix<double>, SparseMatrix<double>> buildPointCloudLaplacian(
 
 // Actual binding code
 // clang-format off
-PYBIND11_MODULE(robust_laplacian_bindings, m) {
+PYBIND11_MODULE(fast_robust_laplacian_bindings, m) {
   m.doc() = "Robust laplacian low-level bindings";
   m.def("setPrintTiming", &setPrintTiming, "set whether to print timing information", py::arg("enable"));
 

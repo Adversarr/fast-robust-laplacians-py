@@ -30,4 +30,4 @@ jobs:
       run: cd build && make
 
     - name: run test
-      run: python3 test/robust_laplacian_test.py
+      run: python3 test/fast_robust_laplacian_test.py

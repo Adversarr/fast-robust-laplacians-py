@@ -9,7 +9,7 @@ from plyfile import PlyData
 sys.path.append(os.path.join(os.path.dirname(__file__), "../build/"))
 sys.path.append(os.path.join(os.path.dirname(__file__), "../src/"))
 
-import robust_laplacian
+import fast_robust_laplacian
 
 # Read input
 plydata = PlyData.read("/path/to/cloud.ply")
@@ -24,10 +24,10 @@ points = np.vstack((
 # faces = np.vstack(tri_data)
 
 # Build Laplacian
-L, M = robust_laplacian.point_cloud_laplacian(points, mollify_factor=1e-5)
+L, M = fast_robust_laplacian.point_cloud_laplacian(points, mollify_factor=1e-5)
 
 # for meshes
-# L, M = robust_laplacian.mesh_laplacian(points, faces, mollify_factor=1e-5)
+# L, M = fast_robust_laplacian.mesh_laplacian(points, faces, mollify_factor=1e-5)
 
 # Compute some eigenvectors
 n_eig = 10
