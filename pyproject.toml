@@ -6,9 +6,11 @@ readme = "README.md"
 license.file = "LICENSE"
 authors = [
   { name = "Nicholas Sharp", email = "nmwsharp@gmail.com" },
+  { name = "Adversarr", email = "zherui_yang@mail.ustc.edu.cn" },
 ]
 maintainers = [
-  {  name = "Nicholas Sharp", email = "nmwsharp@gmail.com" },
+  { name = "Nicholas Sharp", email = "nmwsharp@gmail.com" },
+  { name = "Adversarr", email = "zherui_yang@mail.ustc.edu.cn" },
 ]
 classifiers = [
   "Development Status :: 5 - Production/Stable",
@@ -22,7 +24,7 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/nmwsharp/robust-laplacians-py"
+Homepage = "https://github.com/Adversarr/fast-robust-laplacians-py"
 
 [build-system]
 requires = ["scikit-build-core"]

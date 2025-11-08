@@ -2,12 +2,15 @@ cmake_minimum_required(VERSION 3.10...4.0)
 if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE Release)
 endif()
+# Recurse in to pybind
+set(PYBIND11_NEWPYTHON ON)
+
+set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Set the project name
 project(fast-robust-laplacian-py)
 
-# Recurse in to pybind
-set(PYBIND11_NEWPYTHON ON)
 add_subdirectory(deps/pybind11)
 
 # Enable OpenMP

@@ -2,11 +2,11 @@ name: Build and Publish
 
 # NOTE: build logic is duplicated here and in test_build.yml
 
-# Run on the main branch for commits only
-on:
-  push:
-    branches:     
-      - master
+# # Run on the main branch for commits only
+# on:
+#   push:
+#     branches:     
+#       - master
 
 jobs:
   build_wheels:
@@ -63,7 +63,7 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: pypi
-      url: https://pypi.org/p/robust-laplacian/
+      url: https://pypi.org/p/fast-robust-laplacian/
     permissions: # we authenticate via PyPI's 'trusted publisher' workflow, this permission is required
       id-token: write
     steps:

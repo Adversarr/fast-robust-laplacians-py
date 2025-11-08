@@ -7,5 +7,5 @@ include deps/eigen/COPYING*
 include deps/eigen/README.md
 recursive-include deps/pybind11 *.h CMakeLists.txt *.cmake
 recursive-include src *.cpp *.h
-recursive-include src/robust-laplacian *.py
+recursive-include src/fast-robust-laplacian *.py
 exclude dist
