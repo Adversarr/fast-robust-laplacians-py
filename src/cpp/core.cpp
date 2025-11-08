@@ -33,7 +33,10 @@ bool g_printTiming = false;
 
 void setParallism(int count) {
   Eigen::setNbThreads(count);
+  // Set OpenMP threads
+#ifdef USE_OPENMP
   omp_set_num_threads(count);
+#endif
 }
 
 void setPrintTiming(bool enable) {
