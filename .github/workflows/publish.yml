@@ -2,11 +2,11 @@ name: Build and Publish
 
 # NOTE: build logic is duplicated here and in test_build.yml
 
-# # Run on the main branch for commits only
-# on:
-#   push:
-#     branches:     
-#       - master
+# Run on the main branch for commits only
+on:
+  push:
+    branches:     
+      - master
 
 jobs:
   build_wheels:
