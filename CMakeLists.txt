@@ -33,6 +33,7 @@ include_directories(fast_robust_laplacian_bindings ${CMAKE_CURRENT_SOURCE_DIR}/d
 
 if(USE_OPENMP)
   target_link_libraries(fast_robust_laplacian_bindings PRIVATE OpenMP::OpenMP_CXX)
+  target_compile_definitions(fast_robust_laplacian_bindings PRIVATE USE_OPENMP)
 endif()
 
 target_link_libraries(fast_robust_laplacian_bindings PRIVATE geometry-central)
