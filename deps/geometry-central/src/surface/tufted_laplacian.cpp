@@ -4,11 +4,16 @@
 #include "geometrycentral/surface/simple_idt.h"
 #include "geometrycentral/surface/vertex_position_geometry.h"
 
+#include <chrono>
+#include <iostream>
+
 namespace geometrycentral {
 namespace surface {
 
 std::tuple<SparseMatrix<double>, SparseMatrix<double>>
-buildTuftedLaplacian(SurfaceMesh& mesh, EmbeddedGeometryInterface& geom, double relativeMollificationFactor) {
+buildTuftedLaplacian(SurfaceMesh& mesh, EmbeddedGeometryInterface& geom, double relativeMollificationFactor,
+                     bool printTiming) {
+  auto t_func_start = std::chrono::steady_clock::now();
 
   // Create a copy of the mesh / geometry to operate on
   std::unique_ptr<SurfaceMesh> tuftedMesh = mesh.copyToSurfaceMesh();
@@ -16,23 +21,57 @@ buildTuftedLaplacian(SurfaceMesh& mesh, EmbeddedGeometryInterface& geom, double 
   VertexPositionGeometry tuftedGeom(*tuftedMesh, geom.vertexPositions.reinterpretTo(*tuftedMesh));
   tuftedGeom.requireEdgeLengths();
   EdgeData<double> tuftedEdgeLengths = tuftedGeom.edgeLengths;
+  if (printTiming) {
+    auto t = std::chrono::steady_clock::now();
+    std::chrono::duration<double, std::milli> dt = t - t_func_start;
+    std::cout << "[Tufted] copy mesh+geom & edge lengths: " << dt.count() << " ms" << std::endl;
+  }
 
   // Mollify, if requested
   if (relativeMollificationFactor > 0) {
+    auto t_mollify_start = std::chrono::steady_clock::now();
     mollifyIntrinsic(*tuftedMesh, tuftedEdgeLengths, relativeMollificationFactor);
+    if (printTiming) {
+      auto t = std::chrono::steady_clock::now();
+      std::chrono::duration<double, std::milli> dt = t - t_mollify_start;
+      std::cout << "[Tufted] intrinsic mollification: " << dt.count() << " ms" << std::endl;
+    }
   }
 
   // Build the cover
+  auto t_cover_start = std::chrono::steady_clock::now();
   buildIntrinsicTuftedCover(*tuftedMesh, tuftedEdgeLengths, &tuftedGeom);
+  if (printTiming) {
+    auto t = std::chrono::steady_clock::now();
+    std::chrono::duration<double, std::milli> dt = t - t_cover_start;
+    std::cout << "[Tufted] build intrinsic tufted cover: " << dt.count() << " ms" << std::endl;
+  }
 
   // Flip to delaunay
+  auto t_flip_start = std::chrono::steady_clock::now();
   size_t nFlips = flipToDelaunay(*tuftedMesh, tuftedEdgeLengths);
+  if (printTiming) {
+    auto t = std::chrono::steady_clock::now();
+    std::chrono::duration<double, std::milli> dt = t - t_flip_start;
+    std::cout << "[Tufted] flip to Delaunay (" << nFlips << " flips): " << dt.count() << " ms" << std::endl;
+  }
 
   // Build the matrices
+  auto t_matrices_start = std::chrono::steady_clock::now();
   EdgeLengthGeometry tuftedIntrinsicGeom(*tuftedMesh, tuftedEdgeLengths);
   tuftedIntrinsicGeom.requireCotanLaplacian();
   tuftedIntrinsicGeom.requireVertexLumpedMassMatrix();
+  if (printTiming) {
+    auto t = std::chrono::steady_clock::now();
+    std::chrono::duration<double, std::milli> dt = t - t_matrices_start;
+    std::cout << "[Tufted] build L/M matrices: " << dt.count() << " ms" << std::endl;
+  }
 
+  if (printTiming) {
+    auto t_end = std::chrono::steady_clock::now();
+    std::chrono::duration<double, std::milli> dt = t_end - t_func_start;
+    std::cout << "[Tufted] total function time: " << dt.count() << " ms" << std::endl;
+  }
   return std::make_tuple(0.5 * tuftedIntrinsicGeom.cotanLaplacian, 0.5 * tuftedIntrinsicGeom.vertexLumpedMassMatrix);
 }
 

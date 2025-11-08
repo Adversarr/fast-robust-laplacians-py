@@ -16,12 +16,19 @@
 #include <pybind11/pybind11.h>
 
 #include "Eigen/Dense"
+#include <chrono>
+#include <iostream>
 
 namespace py = pybind11;
 
 using namespace geometrycentral;
 using namespace geometrycentral::surface;
 
+bool g_printTiming = false;
+
+void setPrintTiming(bool enable) {
+  g_printTiming = enable;
+}
 
 // For overloaded functions, with C++11 compiler only
 template <typename... Args>
@@ -59,7 +66,7 @@ buildMeshLaplacian(const DenseMatrix<double>& vMat, const DenseMatrix<size_t>& f
 
   // Do the hard work, calling the geometry-central function
   SparseMatrix<double> L, M;
-  std::tie(L, M) = buildTuftedLaplacian(*mesh, *geometry, mollifyFactor);
+  std::tie(L, M) = buildTuftedLaplacian(*mesh, *geometry, mollifyFactor, g_printTiming);
 
   // If necessary, re-index matrices to account for any unreferenced vertices which were skipped.
   // For any unreferenced verts, creates an identity row/col in the Laplacian and
@@ -144,42 +151,106 @@ std::tuple<SparseMatrix<double>, SparseMatrix<double>> buildPointCloudLaplacian(
   SimplePolygonMesh cloudMesh;
 
   // Copy to std vector representation
+  auto t_func_start = std::chrono::steady_clock::now();
+  auto t_copy_start = std::chrono::steady_clock::now();
   cloudMesh.vertexCoordinates.resize(vMat.rows());
   for (size_t iP = 0; iP < cloudMesh.vertexCoordinates.size(); iP++) {
     cloudMesh.vertexCoordinates[iP] = Vector3{vMat(iP, 0), vMat(iP, 1), vMat(iP, 2)};
   }
+  if (g_printTiming) {
+    auto t = std::chrono::steady_clock::now();
+    std::chrono::duration<double, std::milli> dt = t - t_copy_start;
+    std::cout << "[PointCloud] copy vertices: " << dt.count() << " ms" << std::endl;
+  }
 
   // Generate the local triangulations for the point cloud
+  auto t_knn_start = std::chrono::steady_clock::now();
   Neighbors_t neigh = generate_knn(cloudMesh.vertexCoordinates, nNeigh);
+  if (g_printTiming) {
+    auto t = std::chrono::steady_clock::now();
+    std::chrono::duration<double, std::milli> dt = t - t_knn_start;
+    std::cout << "[PointCloud] kNN: " << dt.count() << " ms" << std::endl;
+  }
+  auto t_normals_start = std::chrono::steady_clock::now();
   std::vector<Vector3> normals = generate_normals(cloudMesh.vertexCoordinates, neigh);
+  if (g_printTiming) {
+    auto t = std::chrono::steady_clock::now();
+    std::chrono::duration<double, std::milli> dt = t - t_normals_start;
+    std::cout << "[PointCloud] normals: " << dt.count() << " ms" << std::endl;
+  }
+  auto t_coords_start = std::chrono::steady_clock::now();
   std::vector<std::vector<Vector2>> coords = generate_coords_projection(cloudMesh.vertexCoordinates, normals, neigh);
+  if (g_printTiming) {
+    auto t = std::chrono::steady_clock::now();
+    std::chrono::duration<double, std::milli> dt = t - t_coords_start;
+    std::cout << "[PointCloud] coordinate projection: " << dt.count() << " ms" << std::endl;
+  }
+  auto t_localtri_start = std::chrono::steady_clock::now();
   LocalTriangulationResult localTri = build_delaunay_triangulations(coords, neigh);
+  if (g_printTiming) {
+    auto t = std::chrono::steady_clock::now();
+    std::chrono::duration<double, std::milli> dt = t - t_localtri_start;
+    std::cout << "[PointCloud] local triangulations: " << dt.count() << " ms" << std::endl;
+  }
 
   // Take the union of all triangles in all the neighborhoods
+  std::chrono::steady_clock::time_point t_union_start;
+  bool union_started = false;
   for (size_t iPt = 0; iPt < cloudMesh.vertexCoordinates.size(); iPt++) {
     const std::vector<size_t>& thisNeigh = neigh[iPt];
     size_t nNeigh = thisNeigh.size();
 
     // Accumulate over triangles
+    if (g_printTiming && iPt == 0) {
+      // Start timing union on first iteration to cover whole loop
+      t_union_start = std::chrono::steady_clock::now();
+      union_started = true;
+    }
     for (const auto& tri : localTri.pointTriangles[iPt]) {
       std::array<size_t, 3> triGlobal = {iPt, thisNeigh[tri[1]], thisNeigh[tri[2]]};
       cloudMesh.polygons.push_back({triGlobal[0], triGlobal[1], triGlobal[2]});
     }
   }
+  if (g_printTiming && union_started) {
+    auto t = std::chrono::steady_clock::now();
+    std::chrono::duration<double, std::milli> dt = t - t_union_start;
+    std::cout << "[PointCloud] union triangles: " << dt.count() << " ms" << std::endl;
+  }
 
 
   // strip unreferenced vertices (can we argue this should never happen? good regardless for robustness.)
+  auto t_strip_start = std::chrono::steady_clock::now();
   std::vector<size_t> oldToNewMap = cloudMesh.stripUnusedVertices();
+  if (g_printTiming) {
+    auto t = std::chrono::steady_clock::now();
+    std::chrono::duration<double, std::milli> dt = t - t_strip_start;
+    std::cout << "[PointCloud] strip unreferenced vertices: " << dt.count() << " ms" << std::endl;
+  }
 
   std::unique_ptr<SurfaceMesh> mesh;
   std::unique_ptr<VertexPositionGeometry> geometry;
+  auto t_make_mesh_start = std::chrono::steady_clock::now();
   std::tie(mesh, geometry) = makeSurfaceMeshAndGeometry(cloudMesh.polygons, cloudMesh.vertexCoordinates);
+  if (g_printTiming) {
+    auto t = std::chrono::steady_clock::now();
+    std::chrono::duration<double, std::milli> dt = t - t_make_mesh_start;
+    std::cout << "[PointCloud] make mesh+geometry: " << dt.count() << " ms" << std::endl;
+  }
 
   SparseMatrix<double> L, M;
-  std::tie(L, M) = buildTuftedLaplacian(*mesh, *geometry, mollifyFactor);
+  auto t_tufted_start = std::chrono::steady_clock::now();
+  std::tie(L, M) = buildTuftedLaplacian(*mesh, *geometry, mollifyFactor, g_printTiming);
+  if (g_printTiming) {
+    auto t = std::chrono::steady_clock::now();
+    std::chrono::duration<double, std::milli> dt = t - t_tufted_start;
+    std::cout << "[PointCloud] tufted laplacian total: " << dt.count() << " ms" << std::endl;
+  }
 
   L = L / 3.;
   M = M / 3.;
+  if (g_printTiming) {
+    std::cout << "[PointCloud] scale matrices by 1/3" << std::endl;
+  }
 
   // If necessary, re-index matrices to account for any unreferenced vertices which were skipped.
   // For any unreferenced verts, creates an identity row/col in the Laplacian and
@@ -188,6 +259,7 @@ std::tuple<SparseMatrix<double>, SparseMatrix<double>> buildPointCloudLaplacian(
     if (ind == INVALID_IND) anyUnreferenced = true;
   }
   if (anyUnreferenced) {
+    auto t_reindex_start = std::chrono::steady_clock::now();
 
 
     // Invert the map
@@ -252,9 +324,19 @@ std::tuple<SparseMatrix<double>, SparseMatrix<double>> buildPointCloudLaplacian(
       M = SparseMatrix<double>(N, N);
       M.setFromTriplets(triplets.begin(), triplets.end());
     }
+    if (g_printTiming) {
+      auto t = std::chrono::steady_clock::now();
+      std::chrono::duration<double, std::milli> dt = t - t_reindex_start;
+      std::cout << "[PointCloud] reindex L/M + fill unreferenced: " << dt.count() << " ms" << std::endl;
+    }
   }
 
 
+  if (g_printTiming) {
+    auto t_all_end = std::chrono::steady_clock::now();
+    std::chrono::duration<double, std::milli> dt = t_all_end - t_func_start;
+    std::cout << "[PointCloud] total function time: " << dt.count() << " ms" << std::endl;
+  }
   return std::make_tuple(L, M);
 }
 
@@ -262,7 +344,7 @@ std::tuple<SparseMatrix<double>, SparseMatrix<double>> buildPointCloudLaplacian(
 // clang-format off
 PYBIND11_MODULE(robust_laplacian_bindings, m) {
   m.doc() = "Robust laplacian low-level bindings";
-  
+  m.def("setPrintTiming", &setPrintTiming, "set whether to print timing information", py::arg("enable"));
 
   m.def("buildMeshLaplacian", &buildMeshLaplacian, "build the mesh Laplacian", 
       py::arg("vMat"), py::arg("fMat"), py::arg("mollifyFactor"));
