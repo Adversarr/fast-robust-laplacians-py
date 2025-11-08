@@ -2,6 +2,18 @@ import numpy as np
 
 import fast_robust_laplacian_bindings as rlb
 
+def set_print_timing(print_timing):
+    """
+    Enable or disable timing output for laplacian computation.
+    
+    Parameters:
+    -----------
+    print_timing : bool
+        If True, timing information will be printed during laplacian computation.
+        If False, no timing information will be printed.
+    """
+    rlb.setPrintTiming(print_timing)
+
 def mesh_laplacian(verts, faces, mollify_factor=1e-5):
 
     ## Validate input
